@@ -5,9 +5,18 @@ from hashlib import sha256
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from os import getenv
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
 load_dotenv()
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class LoginRequest(BaseModel):
     username: str
@@ -21,11 +30,11 @@ def password_hash(input_string):
 @app.post("/api/login")
 async def login(data: LoginRequest):
     db = connect(
-        dbname=getenv("NAME"),
-        host=getenv("HOST"),
-        user=getenv("DB_USER"),
-        password=getenv("PASSWORD"),
-        port=getenv("PORT")
+        dbname=getenv('DB_NAME'),
+        host=getenv('DB_HOST'),
+        user=getenv('DB_USER'),
+        password=getenv('DB_PASSWORD'),
+        port=getenv('DB_PORT')
     )
     cursor = db.cursor()
     cursor.execute(
@@ -45,21 +54,27 @@ async def login(data: LoginRequest):
         return {"success": False, "message": "Incorrect password"}
 
 
-@app.get("/api/users")
+@app.post("/api/users")
 async def get_users():
     pass
 
-@app.get("/api/register/{username}_{password}")
-async def register(username: str, password: str):
-    db = connect(dbname='db', host='127.0.0.1', user='user', password='1234', port="5432")
+@app.post("/api/register")
+async def register(data: LoginRequest):
+    db = connect(
+        dbname=getenv('DB_NAME'),
+        host=getenv('DB_HOST'),
+        user=getenv('DB_USER'),
+        password=getenv('DB_PASSWORD'),
+        port=getenv('DB_PORT')
+                 )
     cursor = db.cursor()
 
     cursor.execute(f'''
         insert into users (user_name, "password")
-         Values ('{username}', '{password_hash(password)}')
+         Values ('{data.username}', '{password_hash(data.password)}')
         ''')
     db.commit()
 
     cursor.close()
     db.close()
-    return True
+    return {"success": True}
